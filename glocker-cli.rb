@@ -26,6 +26,9 @@ if subcommand == 'new-branch'
   issue = issue_data(issue_key)
   fields = issue['fields']
   issue_type_name = fields['issuetype']['name']
+  issue_summary = fields['summary']
+
+  print "Creating new branch for [#{issue_key}] #{issue_summary}"
   branch_name = "#{issue_key.downcase}-#{issue_type_name.downcase}"
   create_new_branch(branch_name)
 end
