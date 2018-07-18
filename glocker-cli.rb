@@ -3,11 +3,13 @@ require 'open-uri'
 require 'json'
 
 DIR = "#{Dir.home}/.glocker/"
+SECRETS_FILE = "#{DIR}secrets.yaml"
 
 def issue_data(key)
   username = ENV['JIRA_USERNAME']
   password = ENV['JIRA_PASSWORD']
   url = "https://jira.2u.com/rest/api/2/issue/#{key}?fields=assignee,summary,issuetype"
+
   open(url, http_basic_authentication: [username, password]) {|f| return JSON.parse(f.read) }
 end
 
