@@ -1,16 +1,22 @@
 #!/usr/bin/env ruby
 require 'open-uri'
+require 'net/https'
 require 'json'
+require 'yaml'
 
 DIR = "#{Dir.home}/.glocker/"
 SECRETS_FILE = "#{DIR}secrets.yaml"
 
 def issue_data(key)
-  username = ENV['JIRA_USERNAME']
-  password = ENV['JIRA_PASSWORD']
+  username = load_secrets['jira_username']
+  password = load_secrets['jira_password']
   url = "https://jira.2u.com/rest/api/2/issue/#{key}?fields=assignee,summary,issuetype"
 
   open(url, http_basic_authentication: [username, password]) {|f| return JSON.parse(f.read) }
+end
+
+def load_secrets
+  YAML.load_file(SECRETS_FILE)
 end
 
 def create_new_branch(name)
@@ -18,13 +24,16 @@ def create_new_branch(name)
 end
 
 def create_pull_request
+  print "Pushing branch to remote ...\n"
+
+  `git push`
+
+  github_token = load_secrets['github_token']
   root_project_dir = `git rev-parse --show-toplevel`
   pr_template_path = "#{root_project_dir.strip}/.github/pull_request_template.md"
-  branch = `git rev-parse --abbrev-ref HEAD`
-  res = read_glocker_file(branch.strip)
-  # https://developer.github.com/v3/pulls/#create-a-pull-request
-  # Fill out the template using information
-  key = res['key']
+  branch = `git rev-parse --abbrev-ref HEAD`.strip
+  res = read_glocker_file(branch)
+  key = res['key'].upcase
   summary = res['summary']
   type = res['type']
   title = "[#{key}][#{type}] #{summary}"
@@ -32,11 +41,38 @@ def create_pull_request
     "https://jira.2u.com/browse/<your-ticket-id>",
     "https://jira.2u.com/browse/#{key}"
   ])
-
-  print "Creating PR with title: \n"
+  remote_origin = `git config --get remote.origin.url`
+  matches = remote_origin.match(/(git@github\.com):(\w+)\/(\w+)\.git/)
+  owner = matches[2]
+  repo = matches[3]
+  print "Creating PR with title for project #{repo} for owner #{owner}: \n"
+  print "\n"
   print "#{title}\n"
   print "-------------\n"
   print "#{body}\n"
+
+  STDOUT.puts "Confirm? y/n"
+  input = STDIN.gets.chomp
+  raise "Aborting PR Creation." unless input.downcase == 'y'
+  print "Creating PR ...\n"
+  print "\n"
+  data = {
+    title: title,
+    body: body,
+    head: branch,
+    base: 'master'
+  }
+  api_endpoint = "https://api.github.com/repos/#{owner}/#{repo}/pulls?access_token=#{github_token}"
+  uri = URI.parse(api_endpoint)
+  http = Net::HTTP.new(uri.host, uri.port)
+  http.use_ssl = true
+  request = Net::HTTP::Post.new(uri.request_uri)
+  request['Content-Type'] = 'applicaton/json'
+  request.body = data.to_json
+  response = http.request(request)
+  if response.code != '201'
+    p response.body
+  end
 end
 
 def format_template_file(path, substitution:)
