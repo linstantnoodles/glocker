@@ -24,6 +24,10 @@ def create_new_branch(name)
 end
 
 def create_pull_request
+  print "Pushing branch to remote ...\n"
+
+  `git push`
+
   github_token = load_secrets['github_token']
   root_project_dir = `git rev-parse --show-toplevel`
   pr_template_path = "#{root_project_dir.strip}/.github/pull_request_template.md"
