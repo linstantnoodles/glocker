@@ -27,9 +27,9 @@ def create_pull_request
   github_token = load_secrets['github_token']
   root_project_dir = `git rev-parse --show-toplevel`
   pr_template_path = "#{root_project_dir.strip}/.github/pull_request_template.md"
-  branch = `git rev-parse --abbrev-ref HEAD`
-  res = read_glocker_file(branch.strip)
-  key = res['key']
+  branch = `git rev-parse --abbrev-ref HEAD`.strip
+  res = read_glocker_file(branch)
+  key = res['key'].upcase
   summary = res['summary']
   type = res['type']
   title = "[#{key}][#{type}] #{summary}"
@@ -37,11 +37,34 @@ def create_pull_request
     "https://jira.2u.com/browse/<your-ticket-id>",
     "https://jira.2u.com/browse/#{key}"
   ])
+  remote_origin = `git config --get remote.origin.url`
+  matches = remote_origin.match(/(git@github\.com):(\w+)\/(\w+)\.git/)
+  owner = matches[2]
+  repo = matches[3]
 
-  print "Creating PR with title: \n"
+  print "Creating PR with title for project #{repo} for owner #{owner}: \n"
   print "#{title}\n"
   print "-------------\n"
   print "#{body}\n"
+
+  STDOUT.puts "Confirm? y/n"
+  input = STDIN.gets.chomp
+  raise "Aborting PR Creation." unless input.downcase == 'y'
+
+  data = {
+    title: title,
+    body: body,
+    head: branch,
+    base: 'master'
+  }
+  api_endpoint = "https://api.github.com/repos/#{owner}/#{repo}/pulls?access_token=#{github_token}"
+  uri = URI.parse(api_endpoint)
+  http = Net::HTTP.new(uri.host, uri.port)
+  http.use_ssl = true
+  request = Net::HTTP::Post.new(uri.request_uri)
+  request['Content-Type'] = 'applicaton/json'
+  request.body = data.to_json
+  response = http.request(request)
 end
 
 def format_template_file(path, substitution:)
