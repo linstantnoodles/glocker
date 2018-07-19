@@ -1,16 +1,22 @@
 #!/usr/bin/env ruby
 require 'open-uri'
+require 'net/https'
 require 'json'
+require 'yaml'
 
 DIR = "#{Dir.home}/.glocker/"
 SECRETS_FILE = "#{DIR}secrets.yaml"
 
 def issue_data(key)
-  username = ENV['JIRA_USERNAME']
-  password = ENV['JIRA_PASSWORD']
+  username = load_secrets['jira_username']
+  password = load_secrets['jira_password']
   url = "https://jira.2u.com/rest/api/2/issue/#{key}?fields=assignee,summary,issuetype"
 
   open(url, http_basic_authentication: [username, password]) {|f| return JSON.parse(f.read) }
+end
+
+def load_secrets
+  YAML.load_file(SECRETS_FILE)
 end
 
 def create_new_branch(name)
@@ -18,12 +24,11 @@ def create_new_branch(name)
 end
 
 def create_pull_request
+  github_token = load_secrets['github_token']
   root_project_dir = `git rev-parse --show-toplevel`
   pr_template_path = "#{root_project_dir.strip}/.github/pull_request_template.md"
   branch = `git rev-parse --abbrev-ref HEAD`
   res = read_glocker_file(branch.strip)
-  # https://developer.github.com/v3/pulls/#create-a-pull-request
-  # Fill out the template using information
   key = res['key']
   summary = res['summary']
   type = res['type']
