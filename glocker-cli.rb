@@ -41,8 +41,8 @@ def create_pull_request
   matches = remote_origin.match(/(git@github\.com):(\w+)\/(\w+)\.git/)
   owner = matches[2]
   repo = matches[3]
-
   print "Creating PR with title for project #{repo} for owner #{owner}: \n"
+  print "\n"
   print "#{title}\n"
   print "-------------\n"
   print "#{body}\n"
@@ -50,7 +50,8 @@ def create_pull_request
   STDOUT.puts "Confirm? y/n"
   input = STDIN.gets.chomp
   raise "Aborting PR Creation." unless input.downcase == 'y'
-
+  print "Creating PR ...\n"
+  print "\n"
   data = {
     title: title,
     body: body,
@@ -65,6 +66,9 @@ def create_pull_request
   request['Content-Type'] = 'applicaton/json'
   request.body = data.to_json
   response = http.request(request)
+  if response.code != '201'
+    p response.body
+  end
 end
 
 def format_template_file(path, substitution:)
