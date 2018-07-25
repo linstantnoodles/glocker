@@ -124,9 +124,9 @@ def create_ticket_file(name, data)
 end
 
 subcommands = [
-  'new-branch',
+  'cob',
   'open',
-  'create-pr'
+  'pr'
 ]
 
 subcommand = ARGV[0]
@@ -135,7 +135,7 @@ if !subcommands.include?(subcommand)
   exit
 end
 
-if subcommand == 'new-branch'
+if subcommand == 'cob'
   issue_key = ARGV[1]
   issue = issue_data(issue_key)
   fields = issue['fields']
@@ -153,6 +153,6 @@ if subcommand == 'new-branch'
   })
 elsif subcommand == 'open'
   open_issue
-elsif subcommand == 'create-pr'
+elsif subcommand == 'pr'
   create_pull_request
 end
