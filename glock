@@ -143,10 +143,25 @@ def checkout_new_branch_by_issue_key(issue_key)
   })
 end
 
+def list_all_glock_tickets
+  result = `find ~/.glocker -maxdepth 2 -iname "*.json"`
+  print "  All glock tickets\n"
+  print "  -----------------\n"
+  result.each_line do |line|
+    data = File.read(line.strip)
+    parsed = JSON.parse(data)
+    key = parsed["key"].upcase
+    summary = parsed["summary"]
+    type = parsed["type"]
+    print "  [#{key}][#{type}] #{summary}\n"
+  end
+end
+
 subcommands = [
   'cob',
   'open',
-  'pr'
+  'pr',
+  'ls'
 ]
 subcommand = ARGV[0]
 if !subcommands.include?(subcommand)
@@ -164,4 +179,6 @@ elsif subcommand == 'open'
   open_ticket_in_curr_branch
 elsif subcommand == 'pr'
   create_pr_for_current_branch
+elsif subcommand == 'ls'
+  list_all_glock_tickets
 end
