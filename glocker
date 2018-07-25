@@ -1,6 +1,7 @@
 #!/usr/bin/env ruby
 require 'open-uri'
 require 'net/https'
+require 'fileutils'
 require 'json'
 require 'yaml'
 
@@ -23,6 +24,19 @@ def create_new_branch(name)
   system("git checkout -b #{name}")
 end
 
+def edit_pr(branch_name, body)
+  p body
+  dir = ticket_dir(branch_name)
+  pr_file_name = "#{dir}pull-request.md"
+  new_pr_file = File.new(pr_file_name, 'w')
+  new_pr_file.write(body)
+  new_pr_file.close
+  system("cat #{pr_file_name} | vim - +'w! #{pr_file_name}'")
+  updated_file = File.new(pr_file_name, 'r')
+  content = updated_file.read
+  content
+end
+
 def create_pull_request
   print "Pushing branch to remote ...\n"
 
@@ -32,7 +46,7 @@ def create_pull_request
   root_project_dir = `git rev-parse --show-toplevel`
   pr_template_path = "#{root_project_dir.strip}/.github/pull_request_template.md"
   branch = `git rev-parse --abbrev-ref HEAD`.strip
-  res = read_glocker_file(branch)
+  res = read_ticket_file(branch)
   key = res['key'].upcase
   summary = res['summary']
   type = res['type']
@@ -41,6 +55,9 @@ def create_pull_request
     "https://jira.2u.com/browse/<your-ticket-id>",
     "https://jira.2u.com/browse/#{key}"
   ])
+
+  body = edit_pr(branch, body)
+
   remote_origin = `git config --get remote.origin.url`
   matches = remote_origin.match(/(git@github\.com):(\w+)\/(\w+)\.git/)
   owner = matches[2]
@@ -83,21 +100,26 @@ end
 
 def open_issue
   branch = `git rev-parse --abbrev-ref HEAD`
-  res = read_glocker_file(branch.strip)
+  res = read_ticket_file(branch.strip)
   url = "https://jira.2u.com/browse/#{res['key']}"
   `open #{url}`
 end
 
-def read_glocker_file(name)
-  f = File.new("#{DIR}#{name}", 'r')
+def ticket_dir(branch_name)
+  "#{DIR}#{branch_name}/"
+end
+
+def read_ticket_file(name)
+  f = File.new("#{DIR}#{name}/ticket.json", 'r')
   JSON.parse(f.read)
 end
 
-def create_glocker_file(name, data)
-  if !Dir.exists?(DIR)
-    Dir.mkdir(DIR)
+def create_ticket_file(name, data)
+  issue_dir = ticket_dir(name)
+  if !Dir.exists?(issue_dir)
+    FileUtils.mkdir_p(issue_dir)
   end
-  f = File.new("#{DIR}#{name}", 'w')
+  f = File.new("#{issue_dir}ticket.json", 'w')
   f.write(data.to_json)
 end
 
@@ -123,7 +145,7 @@ if subcommand == 'new-branch'
   branch_name = "#{issue_key.downcase}-#{issue_type_name.downcase}"
   create_new_branch(branch_name)
   print "Creating glocker file #{branch_name} ... \n"
-  create_glocker_file(branch_name, {
+  create_ticket_file(branch_name, {
     key: issue_key,
     summary: issue_summary,
     type: issue_type_name,
