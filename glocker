@@ -20,7 +20,7 @@ def load_secrets
   YAML.load_file(SECRETS_FILE)
 end
 
-def create_new_branch(name)
+def create_and_checkout_branch_from_latest_master(name)
   system("git checkout -b #{name}")
 end
 
@@ -137,13 +137,18 @@ end
 
 if subcommand == 'cob'
   issue_key = ARGV[1]
+  if !issue_key
+    p "Please provide an issue key (i.e app-11)"
+    exit
+  end
+
   issue = issue_data(issue_key)
   fields = issue['fields']
   issue_type_name = fields['issuetype']['name']
   issue_summary = fields['summary']
   print "Creating new branch for [#{issue_key}] #{issue_summary} ...\n"
   branch_name = "#{issue_key.downcase}-#{issue_type_name.downcase}"
-  create_new_branch(branch_name)
+  create_and_checkout_branch_from_latest_master(branch_name)
   print "Creating glocker file #{branch_name} ... \n"
   create_ticket_file(branch_name, {
     key: issue_key,
