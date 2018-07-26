@@ -6,7 +6,7 @@ require 'json'
 require 'yaml'
 
 DIR = "#{Dir.home}/.glocker/"
-CREDENTIALS_FILE = "#{DIR}secrets.yaml"
+CREDENTIALS_FILE = "#{DIR}credentials.yaml"
 
 def fetch_jira_ticket_data(key)
   username = load_secrets['jira_username']
@@ -38,9 +38,44 @@ def edit_pr(branch_name, body)
   content
 end
 
+def format_template_file(path, substitution:)
+  f = File.new(path, 'r')
+  contents = f.read
+  contents.gsub(substitution[0], substitution[1])
+end
+
+def ticket_dir(branch_name)
+  "#{DIR}#{branch_name}/"
+end
+
+def read_ticket_file(name)
+  f = File.new("#{DIR}#{name}/ticket.json", 'r')
+  JSON.parse(f.read)
+end
+
+def create_ticket_file(name, data)
+  issue_dir = ticket_dir(name)
+  if !Dir.exists?(issue_dir)
+    FileUtils.mkdir_p(issue_dir)
+  end
+  f = File.new("#{issue_dir}ticket.json", 'w')
+  f.write(data.to_json)
+end
+
+def open_ticket_in_curr_branch
+  branch = `git rev-parse --abbrev-ref HEAD`.strip
+  begin
+    ticket_data = read_ticket_file(branch.strip)
+  rescue Errno::ENOENT => e
+    print "Unable to find ticket for branch \"#{branch}\"!\n"
+    exit
+  end
+  url = "https://jira.2u.com/browse/#{ticket_data['key']}"
+  `open #{url}`
+end
+
 def create_pr_for_current_branch
   print "Pushing branch to remote ...\n"
-
   `git push`
 
   github_token = load_secrets['github_token']
@@ -72,6 +107,7 @@ def create_pr_for_current_branch
   STDOUT.puts "Confirm? y/n"
   input = STDIN.gets.chomp
   raise "Aborting PR Creation." unless input.downcase == 'y'
+
   print "Creating PR ...\n"
   print "\n"
   data = {
@@ -89,39 +125,9 @@ def create_pr_for_current_branch
   request.body = data.to_json
   response = http.request(request)
   if response.code != '201'
-    p response.body
+    print "Creating PR failed :(\n"
+    print "#{response.body}\n"
   end
-end
-
-def format_template_file(path, substitution:)
-  f = File.new(path, 'r')
-  contents = f.read
-  contents.gsub(substitution[0], substitution[1])
-end
-
-def open_ticket_in_curr_branch
-  branch = `git rev-parse --abbrev-ref HEAD`
-  res = read_ticket_file(branch.strip)
-  url = "https://jira.2u.com/browse/#{res['key']}"
-  `open #{url}`
-end
-
-def ticket_dir(branch_name)
-  "#{DIR}#{branch_name}/"
-end
-
-def read_ticket_file(name)
-  f = File.new("#{DIR}#{name}/ticket.json", 'r')
-  JSON.parse(f.read)
-end
-
-def create_ticket_file(name, data)
-  issue_dir = ticket_dir(name)
-  if !Dir.exists?(issue_dir)
-    FileUtils.mkdir_p(issue_dir)
-  end
-  f = File.new("#{issue_dir}ticket.json", 'w')
-  f.write(data.to_json)
 end
 
 def checkout_new_branch_by_issue_key(issue_key)
@@ -134,7 +140,7 @@ def checkout_new_branch_by_issue_key(issue_key)
   branch_name = "#{issue_key.downcase}-#{issue_type_name.downcase}"
   create_and_checkout_branch_from_latest_master(branch_name)
 
-  print "Creating glocker ticket file #{branch_name} ... \n"
+  print "Creating ticket file #{branch_name} ... \n"
   create_ticket_file(branch_name, {
     key: issue_key,
     summary: issue_summary,
@@ -157,28 +163,47 @@ def list_all_glock_tickets
   end
 end
 
-subcommands = [
-  'cob',
-  'open',
-  'pr',
-  'ls'
+
+commands_detail_list = [
+  {
+    name: 'cob',
+    description: 'Check out a new branch by issue key (example: glock cob app-1)'
+  },
+  {
+    name: 'open',
+    description: 'Opens the ticket of current branch in browser'
+  },
+  {
+    name: 'pr',
+    description: 'Creates a new pull request for current branch against master'
+  },
+  {
+    name: 'ls',
+    description: 'Lists all branches tracked by glock'
+  }
 ]
-subcommand = ARGV[0]
-if !subcommands.include?(subcommand)
-  p "Accepted subcommands #{subcommands}"
+
+user_command = ARGV[0]
+if !commands_detail_list.map {|x| x[:name]}.include?(user_command)
+  print "Commands\n"
+  commands_detail_list.each do |command_detail|
+    print "  #{command_detail[:name]} - #{command_detail[:description]}\n"
+  end
   exit
 end
-if subcommand == 'cob'
+
+case user_command
+when 'cob'
   issue_key = ARGV[1]
   if !issue_key
-    p "Please provide an issue key (i.e app-11)"
+    print "Please provide an issue key (i.e app-11)\n"
     exit
   end
   checkout_new_branch_by_issue_key(issue_key)
-elsif subcommand == 'open'
+when 'open'
   open_ticket_in_curr_branch
-elsif subcommand == 'pr'
+when 'pr'
   create_pr_for_current_branch
-elsif subcommand == 'ls'
+when 'ls'
   list_all_glock_tickets
 end
