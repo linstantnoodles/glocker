@@ -118,7 +118,6 @@ def create_pull_request_for_branch(branch)
   matches = remote_origin.match(/(git@github\.com):(\w+)\/(\w+)\.git/)
   owner = matches[2]
   repo = matches[3]
-
   pr_data = pull_request_data_for_branch(branch: branch)
 
   print "Pushing current branch \"#{branch}\" to remote ...\n"
@@ -133,9 +132,12 @@ def create_pull_request_for_branch(branch)
   STDOUT.puts "Confirm? y/n"
   input = STDIN.gets.chomp
   raise "Aborting PR Creation." unless input.downcase == 'y'
+
+  print "Pushing current branch \"#{branch}\" to remote ...\n"
+  `git push`
+
   print "Creating PR ...\n"
   print "\n"
-
   api_endpoint = "https://api.github.com/repos/#{owner}/#{repo}/pulls?access_token=#{credentials['github_token']}"
   uri = URI.parse(api_endpoint)
   http = Net::HTTP.new(uri.host, uri.port)
