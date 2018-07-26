@@ -199,6 +199,7 @@ commands_detail_list = [
 
 user_command = ARGV[0]
 if !commands_detail_list.map {|x| x[:name]}.include?(user_command)
+  print "\"#{user_command}\" is not a supported command.\n\n"
   print "Commands\n"
   commands_detail_list.each do |command_detail|
     print "  #{command_detail[:name]} - #{command_detail[:description]}\n"
