@@ -9,6 +9,7 @@ DIR = "#{Dir.home}/.glocker/"
 CREDENTIALS_FILE = "#{DIR}credentials.yaml"
 
 def jira_ticket_data_by_key(key)
+  print "Retrieving your ticket data for key #{key}...\n"
   username = credentials['jira_username']
   password = credentials['jira_password']
   url = "https://jira.2u.com/rest/api/2/issue/#{key}?fields=assignee,summary,issuetype"
@@ -123,11 +124,13 @@ def create_pull_request_for_branch(branch)
   print "Pushing current branch \"#{branch}\" to remote ...\n"
   `git push`
 
-  print "Creating PR with title for project #{repo} for owner #{owner}: \n"
+  print "\n\n"
+  print "Creating PR in #{repo} by #{owner}: \n"
   print "\n"
-  print "#{pr_data[:title]}\n"
+  print "Pull Request\n"
   print "-------------\n"
-  print "#{pr_data[:body]}\n"
+  print "Title: #{pr_data[:title]}\n\n"
+  print "#{pr_data[:body]}\n\n"
 
   STDOUT.puts "Confirm? y/n"
   input = STDIN.gets.chomp
@@ -154,9 +157,9 @@ end
 
 def new_branch_and_glock_ticket_by_key(issue_key)
   ticket_data = jira_ticket_data_by_key(issue_key)
-  p ticket_data
-  print "Creating new branch for [#{issue_key}] #{ticket_data[:summary]} ...\n"
   branch_name = "#{issue_key.downcase}-#{ticket_data[:type].downcase}"
+
+  print "Creating new branch \"#{branch_name}\" for [#{issue_key}] #{ticket_data[:summary]} ...\n"
   create_and_checkout_branch_from_latest_master(branch_name)
 
   print "Creating ticket file #{branch_name} ... \n"
