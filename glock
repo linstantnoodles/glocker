@@ -124,11 +124,14 @@ def create_pull_request_for_branch(branch)
   print "Pushing current branch \"#{branch}\" to remote ...\n"
   `git push`
 
-  print "Creating PR with title for project #{repo} for owner #{owner}: \n"
+  print "\n\n\n"
+  print "Creating PR in #{repo} by #{owner}: \n"
   print "\n"
+  print "Pull Request\n"
+  print "-------------\n"
   print "#{pr_data[:title]}\n"
   print "-------------\n"
-  print "#{pr_data[:body]}\n"
+  print "#{pr_data[:body]}\n\n"
 
   STDOUT.puts "Confirm? y/n"
   input = STDIN.gets.chomp
