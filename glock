@@ -176,12 +176,13 @@ def list_all_glock_files
   print "  All glock tickets\n"
   print "  -----------------\n"
   result.each_line do |line|
+    branch = line.split('/')[-2]
     data = File.read(line.strip)
     parsed = JSON.parse(data)
     key = parsed["key"].upcase
     summary = parsed["summary"]
     type = parsed["type"]
-    print "  [#{key}][#{type}] #{summary}\n"
+    print "  (#{branch}) [#{key}][#{type}] #{summary}\n"
   end
 end
 
