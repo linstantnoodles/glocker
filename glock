@@ -13,13 +13,23 @@ def jira_ticket_data_by_key(key)
   username = credentials['jira_username']
   password = credentials['jira_password']
   url = "https://jira.2u.com/rest/api/2/issue/#{key}?fields=assignee,summary,issuetype"
-  open(url, http_basic_authentication: [username, password]) do |f|
-    issue = JSON.parse(f.read)
-    fields = issue['fields']
-    return {
-      type: fields['issuetype']['name'],
-      summary: fields['summary']
-    }
+  begin
+    open(url, http_basic_authentication: [username, password]) do |f|
+      issue = JSON.parse(f.read)
+      fields = issue['fields']
+      return {
+        type: fields['issuetype']['name'],
+        summary: fields['summary']
+      }
+    end
+  rescue OpenURI::HTTPError => e
+    if e.io.status[0] == '401'
+      print "Could not get JIRA ticket data. Are your JIRA credentials setup? Please double check.\n"
+      exit
+    else
+      print "Could not retrieve ticket data. Error: #{e.message}\n"
+      exit
+    end
   end
 end
 
