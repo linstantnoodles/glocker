@@ -24,7 +24,7 @@ def jira_ticket_data_by_key(key)
 end
 
 def credentials
-  YAML.load_file(CREDENTIALS_FILE)
+  @_credentials ||= YAML.load_file(CREDENTIALS_FILE)
 end
 
 def updated_pr_body_from_user_input(branch_name, body)
@@ -70,6 +70,27 @@ def create_glock_file(branch_name, data)
   f.close
 end
 
+def add_comment_to_issue_for_branch(branch:, comment:)
+  res = read_glock_file_by_branch(branch)
+  username = credentials['jira_username']
+  password = credentials['jira_password']
+  key = res['key'].upcase
+  api_endpoint = "https://jira.2u.com/rest/api/2/issue/#{key}/comment"
+  uri = URI.parse(api_endpoint)
+  http = Net::HTTP.new(uri.host, uri.port)
+  http.use_ssl = true
+  request = Net::HTTP::Post.new(uri.request_uri)
+  request.basic_auth username, password
+  request['Content-Type'] = 'application/json'
+  request.body = { body: comment }.to_json
+  response = http.request(request)
+  if response.code != '201'
+    print "Commenting on issue #{key} failed :(\n"
+    print "#{response.body}\n"
+  else
+    print "Posted '#{comment}' to issue #{key}\n"
+  end
+end
 
 def pull_request_data_for_branch(branch:, base: 'master')
   root_project_dir = `git rev-parse --show-toplevel`
@@ -140,12 +161,17 @@ def create_pull_request_for_branch(branch)
   http = Net::HTTP.new(uri.host, uri.port)
   http.use_ssl = true
   request = Net::HTTP::Post.new(uri.request_uri)
-  request['Content-Type'] = 'applicaton/json'
+  request['Content-Type'] = 'application/json'
   request.body = pr_data.to_json
   response = http.request(request)
   if response.code != '201'
     print "Creating PR failed :(\n"
     print "#{response.body}\n"
+  else
+    html_url = JSON.parse(response.body)['html_url']
+    print "PR created: #{html_url}\n"
+    print "Updating issue with PR link ...\n"
+    add_comment_to_issue_for_branch(branch: branch, comment: "Pull request: #{html_url}")
   end
 end
 
