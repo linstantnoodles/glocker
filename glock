@@ -222,7 +222,7 @@ def setup
   Dir.mkdir(DIR)
   print "Creating #{CREDENTIALS_FILE} ...\n"
   f = File.new("#{CREDENTIALS_FILE}", 'w')
-  f.write("jira_username = JIRA_USERNAME\njira_password = JIRA_PASSWORD\ngithub_token = GITHUB_TOKEN")
+  f.write("jira_username: JIRA_USERNAME\njira_password: JIRA_PASSWORD\ngithub_token: GITHUB_TOKEN")
   f.close
   print "Done! Update #{CREDENTIALS_FILE} with the correct credentials and you're all set.\n"
 end
