@@ -27,12 +27,6 @@ def credentials
   YAML.load_file(CREDENTIALS_FILE)
 end
 
-def create_and_checkout_branch_from_latest_master(name)
-  system('git checkout master')
-  system('git pull')
-  system("git checkout -b #{name}")
-end
-
 def updated_pr_body_from_user_input(branch_name, body)
   dir = glock_file_dir(branch_name)
   pr_file_name = "#{dir}pull-request.md"
@@ -160,7 +154,7 @@ def new_branch_and_glock_ticket_by_key(issue_key)
   branch_name = "#{issue_key.downcase}-#{ticket_data[:type].downcase}"
 
   print "Creating new branch \"#{branch_name}\" for [#{issue_key}] #{ticket_data[:summary]} ...\n"
-  create_and_checkout_branch_from_latest_master(branch_name)
+  system("git checkout -b #{name}")
 
   print "Creating ticket file #{branch_name} ... \n"
   create_glock_file(branch_name, {
