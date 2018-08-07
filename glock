@@ -206,6 +206,17 @@ def list_all_glock_files
   end
 end
 
+def setup
+  return print "#{DIR} already exists!\n" if Dir.exists?(DIR)
+  print "Creating #{DIR} ...\n"
+  Dir.mkdir(DIR)
+  print "Creating #{CREDENTIALS_FILE} ...\n"
+  f = File.new("#{CREDENTIALS_FILE}", 'w')
+  f.write("jira_username = JIRA_USERNAME\njira_password = JIRA_PASSWORD\ngithub_token = GITHUB_TOKEN")
+  f.close
+  print "Done! Update #{CREDENTIALS_FILE} with the correct credentials and you're all set.\n"
+end
+
 commands_detail_list = [
   {
     name: 'cob',
@@ -222,6 +233,10 @@ commands_detail_list = [
   {
     name: 'ls',
     description: 'Lists all branches tracked by glock'
+  },
+  {
+    name: 'setup',
+    description: 'Sets up glock'
   }
 ]
 
@@ -249,4 +264,6 @@ when 'pr'
   create_pull_request_for_branch(current_branch)
 when 'ls'
   list_all_glock_files
+when 'setup'
+  setup
 end
